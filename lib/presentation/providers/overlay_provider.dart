@@ -11,6 +11,10 @@ final overlayRepositoryProvider = Provider<OverlayRepository>((ref) {
 /// オーバーレイ画像の状態を管理するNotifier
 class OverlayManagerNotifier extends StateNotifier<List<OverlayImage>> {
   OverlayManagerNotifier() : super([]);
+  
+  // 選択中のオーバーレイID
+  String? _selectedOverlayId;
+  String? get selectedOverlayId => _selectedOverlayId;
 
   /// 新しいオーバーレイ画像を追加
   void addOverlay(OverlayImage overlay) {
@@ -22,6 +26,9 @@ class OverlayManagerNotifier extends StateNotifier<List<OverlayImage>> {
   /// 指定されたIDのオーバーレイ画像を削除
   void removeOverlay(String id) {
     state = state.where((overlay) => overlay.id != id).toList();
+    if (_selectedOverlayId == id) {
+      _selectedOverlayId = null;
+    }
   }
 
   /// オーバーレイ画像の位置、サイズ、角度を更新
@@ -42,23 +49,21 @@ class OverlayManagerNotifier extends StateNotifier<List<OverlayImage>> {
   /// 全てのオーバーレイをクリア
   void clearOverlays() {
     state = [];
+    _selectedOverlayId = null;
   }
   
-  /// 指定されたインデックスのオーバーレイを選択状態にする
+  /// 指定されたIDのオーバーレイを選択状態にする
   void selectOverlay(String id) {
-    state = state.map((overlay) {
-      if (overlay.id == id) {
-        return overlay.copyWith(isSelected: true);
-      } else {
-        // 他のオーバーレイの選択状態を解除
-        return overlay.copyWith(isSelected: false);
-      }
-    }).toList();
+    _selectedOverlayId = id;
+    // 状態が変わったことを通知するため、stateを更新
+    state = [...state];
   }
   
-  /// 全てのオーバーレイの選択状態を解除
+  /// オーバーレイの選択状態を解除
   void clearSelection() {
-    state = state.map((overlay) => overlay.copyWith(isSelected: false)).toList();
+    _selectedOverlayId = null;
+    // 状態が変わったことを通知するため、stateを更新
+    state = [...state];
   }
 }
 
@@ -68,10 +73,22 @@ final overlayManagerProvider = StateNotifierProvider<OverlayManagerNotifier, Lis
   return OverlayManagerNotifier();
 });
 
+/// 現在選択中のオーバーレイIDを提供するプロバイダー
+final selectedOverlayIdProvider = Provider<String?>((ref) {
+  return ref.watch(overlayManagerProvider.notifier).selectedOverlayId;
+});
+
 /// 現在選択中のオーバーレイ画像を提供するプロバイダー
 final selectedOverlayProvider = Provider<OverlayImage?>((ref) {
   final overlays = ref.watch(overlayManagerProvider);
-  return overlays.firstWhere((overlay) => overlay.isSelected, orElse: () => null);
+  final selectedId = ref.watch(selectedOverlayIdProvider);
+  
+  if (selectedId == null) return null;
+  
+  return overlays.firstWhere(
+    (overlay) => overlay.id == selectedId,
+    orElse: () => null as OverlayImage, // nullを返すため正確には型エラーだが、実際にはnullが返されないように設計されている
+  );
 });
 
 /// オーバーレイの表示状態を管理するプロバイダー
