@@ -21,6 +21,7 @@ class CameraDataSourceImpl implements CameraDataSource {
   late CameraController _cameraController;
   final CameraDescription _camera;
   
+  /// コンストラクタ：カメラ情報を受け取る
   CameraDataSourceImpl(this._camera);
   
   @override
